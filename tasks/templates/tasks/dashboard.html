@@ -1,0 +1,106 @@
+{% extends 'tasks/base.html' %}
+{% block content %}
+<style>
+  .top-row { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:14px; margin-bottom:24px; }
+  .top-row h2 { font-size:1.8rem; margin:0; }
+  .subtitle { color:var(--text-dim); font-size:0.9rem; margin-top:4px; }
+
+  .stats-row { display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap:16px; margin-bottom:24px; }
+  .stat-card {
+    background: var(--glass); border:1px solid var(--glass-border); border-radius:14px;
+    padding:18px; backdrop-filter: blur(16px);
+  }
+  .stat-num { font-size:1.8rem; font-weight:800; }
+  .stat-label { font-size:0.8rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.5px; margin-top:4px; }
+
+  .filter-select { max-width:220px; }
+  .task-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:18px; }
+  .task-card {
+    background: var(--glass); border-radius:16px; padding:20px;
+    border:1px solid var(--glass-border);
+    backdrop-filter: blur(16px);
+    display:flex; flex-direction:column; gap:10px;
+    position:relative; overflow:hidden;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+  .task-card::before {
+    content:""; position:absolute; top:0; left:0; width:5px; height:100%;
+  }
+  .task-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(0,0,0,0.35); }
+  .task-card.priority-high::before { background: linear-gradient(#ff5470,#e0344b); }
+  .task-card.priority-medium::before { background: linear-gradient(#ff8906,#e07000); }
+  .task-card.priority-low::before { background: linear-gradient(#2cb67d,#1e9c68); }
+
+  .task-title { font-weight:700; font-size:1.1rem; }
+  .task-meta { font-size:0.83rem; color:var(--text-dim); display:flex; align-items:center; gap:6px; }
+  .badge {
+    display:inline-block; padding:5px 12px; border-radius:20px;
+    font-size:0.72rem; font-weight:700; width:fit-content; text-transform:uppercase; letter-spacing:0.3px;
+  }
+  .badge-pending { background: rgba(255,137,6,0.15); color:#ffb75d; border:1px solid rgba(255,137,6,0.3); }
+  .badge-in_progress { background: rgba(59,130,246,0.15); color:#7db6ff; border:1px solid rgba(59,130,246,0.3); }
+  .badge-completed { background: rgba(44,182,125,0.15); color:#7ce3b3; border:1px solid rgba(44,182,125,0.3); }
+  .task-actions { display:flex; gap:8px; margin-top:6px; }
+  .status-form select { padding:8px 10px; font-size:0.82rem; }
+  .empty-state { text-align:center; padding:60px 20px; color:var(--text-dim); }
+  .empty-state .icon { font-size:3rem; margin-bottom:10px; }
+</style>
+
+<div class="top-row">
+    <div>
+        <h2>{% if is_manager %}All Tasks{% else %}My Tasks{% endif %}</h2>
+        <div class="subtitle">{% if is_manager %}Manage your team's workload{% else %}Here's what's on your plate{% endif %}</div>
+    </div>
+    {% if is_manager %}
+        <a href="{% url 'task_create' %}" class="btn btn-primary">+ New Task</a>
+    {% endif %}
+</div>
+
+<div class="stats-row">
+    <div class="stat-card"><div class="stat-num">{{ tasks.count }}</div><div class="stat-label">Total</div></div>
+    <div class="stat-card"><div class="stat-num">{{ tasks|length }}</div><div class="stat-label">Visible</div></div>
+</div>
+
+<form method="get" style="margin-bottom:22px;">
+    <select name="status" class="filter-select" onchange="this.form.submit()">
+        <option value="">All Statuses</option>
+        {% for value, label in status_choices %}
+            <option value="{{ value }}" {% if request.GET.status == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+    </select>
+</form>
+
+<div class="task-grid">
+{% for task in tasks %}
+    <div class="task-card priority-{{ task.priority }}">
+        <div class="task-title">{{ task.title }}</div>
+        <div class="task-meta">👤 {{ task.assigned_to.username }}</div>
+        <div class="task-meta">📅 {{ task.due_date|default:"No deadline" }}</div>
+        <span class="badge badge-{{ task.status }}">{{ task.get_status_display }}</span>
+
+        {% if task.assigned_to == user %}
+        <form method="post" action="{% url 'task_status_update' task.pk %}" class="status-form">
+            {% csrf_token %}
+            <select name="status" onchange="this.form.submit()">
+                {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if task.status == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        {% endif %}
+
+        {% if is_manager %}
+        <div class="task-actions">
+            <a href="{% url 'task_update' task.pk %}" class="btn btn-secondary btn-sm">✏️ Edit</a>
+            <a href="{% url 'task_delete' task.pk %}" class="btn btn-danger btn-sm">🗑️ Delete</a>
+        </div>
+        {% endif %}
+    </div>
+{% empty %}
+    <div class="empty-state">
+        <div class="icon">📭</div>
+        <p>No tasks found. Enjoy the calm!</p>
+    </div>
+{% endfor %}
+</div>
+{% endblock %}

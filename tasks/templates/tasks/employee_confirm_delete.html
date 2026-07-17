@@ -1,0 +1,12 @@
+{% extends 'tasks/base.html' %}
+{% block content %}
+<div class="card" style="max-width:460px; margin:60px auto; text-align:center;">
+    <h2>Remove "{{ employee.user.username }}"?</h2>
+    <p style="color:var(--text-dim); margin-bottom:20px;">This deletes their employee profile only, not their login account.</p>
+    <form method="post" style="display:flex; gap:10px; justify-content:center;">
+        {% csrf_token %}
+        <button class="btn btn-danger">Yes, Remove</button>
+        <a href="{% url 'employee_list' %}" class="btn btn-secondary">Cancel</a>
+    </form>
+</div>
+{% endblock %}
